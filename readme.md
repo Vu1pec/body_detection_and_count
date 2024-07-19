@@ -6,7 +6,7 @@
 
 需要优化的还有（代码）：代码很乱，改参数变量不方便。readme写的一坨。
 
-运行main.py开始程序，调整84行的VideoCapture函数来选择不同视频/摄像头
+运行main.py就可以直接开始程序了，调整84行的VideoCapture函数来选择不同视频/摄像头
 self.cap = cv2.VideoCapture(0)  # 设置为0就可以变成摄像头，mac注意在设置里给pycharm权限
 
 如果视频比例看起来不正常，可能会影响检测准确度，请调整 main.py 22、23行的self.width和self.height
