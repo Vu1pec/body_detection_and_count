@@ -19,8 +19,8 @@ class ActionRecognitionApp:
         self.cv2offset = 50
         self.counts = []
 
-        self.width = 800
-        self.height = 600
+        self.width = 800  # 800
+        self.height = 600  # 600
         self.standard_push_up = pd.read_csv('standard_push_up.csv', header=None).values.flatten()
         self.standard_pull_up = pd.read_csv('standard_pull_up.csv', header=None).values.flatten()
         self.init_mediapipe()
@@ -32,9 +32,9 @@ class ActionRecognitionApp:
 
     @staticmethod
     def calculate_angle(a, b, c):
-        a = np.array(a)  # 第一个点
-        b = np.array(b)  # 中间点（关节）
-        c = np.array(c)  # 最后一个点
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
 
         radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
         angle = np.abs(radians * 180.0 / np.pi)
@@ -49,13 +49,10 @@ class ActionRecognitionApp:
         self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5,
                                       min_tracking_confidence=0.5)
         self.mp_drawing = mp.solutions.drawing_utils
-        # self.mp_hands = mp.solutions.hands
-        # self.hands = self.mp_hands.Hands(static_image_mode=False, min_detection_confidence=0.35, min_tracking_confidence=0.5)
-        # self.mp_draw = mp.solutions.drawing_utils
 
     def load_model(self):
-        self.model = joblib.load('action_recognition_model.joblib')
-        self.label_encoder = joblib.load('label_encoder.joblib')
+        self.model = joblib.load('action_recognition_model2.joblib')
+        self.label_encoder = joblib.load('label_encoder2.joblib')
 
     def setup_gui(self):
         self.start_button = tk.Button(self.window, text="开始", width=25, command=self.toggle_capture)
@@ -84,7 +81,7 @@ class ActionRecognitionApp:
 
     def start_capture(self):
         self.is_capturing = True
-        self.cap = cv2.VideoCapture("train.mp4")
+        self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         self.start_button.config(text="停止")
@@ -126,10 +123,10 @@ class ActionRecognitionApp:
 
         self.display_frame(frame)
 
+    # angle不用作标准度计算，仅做debug/完成任务使用。
     def draw_angles(self, frame, results):
         landmarks = results.pose_landmarks.landmark
 
-        # 获取需要的关键点坐标
         shoulder = [landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
                     landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
         elbow = [landmarks[self.mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
@@ -137,10 +134,8 @@ class ActionRecognitionApp:
         wrist = [landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].x,
                  landmarks[self.mp_pose.PoseLandmark.LEFT_WRIST.value].y]
 
-        # 计算肘部角度
         angle = self.calculate_angle(shoulder, elbow, wrist)
 
-        # 可视化角度
         cv2.putText(frame, str(int(angle)),
                     tuple(np.multiply(elbow, [640, 480]).astype(int)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
@@ -160,13 +155,10 @@ class ActionRecognitionApp:
 
             h, w, c = frame.shape
 
-            # 转换左手腕坐标
+            # 转换左右手坐标
             left_cx, left_cy = int(left_wrist.x * w), int(left_wrist.y * h)
-
-            # 转换右手腕坐标
             right_cx, right_cy = int(right_wrist.x * w), int(right_wrist.y * h)
 
-            # 检查左手或右手是否在红色方框内
             if (10 < left_cx < 60 and 10 < left_cy < 60) or (10 < right_cx < 60 and 10 < right_cy < 60):
                 self.stop_capture()
 
@@ -182,7 +174,7 @@ class ActionRecognitionApp:
 
             self.update_action_count(movement)
 
-            self.draw_angles(frame, results)  # TODO
+            self.draw_angles(frame, results)
 
             similarity = None
             if action == "push_up":
@@ -206,6 +198,7 @@ class ActionRecognitionApp:
 
     def display_frame(self, frame):
         self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+        # TODO 用摄像头时为用户显示镜像镜头，注意不要影响文字（你可能会让文字也镜像，但是代码现在很乱，你可能不知道在哪里让他镜像，哈哈！
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
     def draw_pose_landmarks(self, frame, pose_landmarks):
@@ -322,7 +315,6 @@ class ActionRecognitionApp:
                     (0, 255, 0), 2)
 
     def show_results(self):
-        # smoothed_predictions = self.smooth_predictions(self.predictions)
         result_window = tk.Toplevel(self.window)
         result_window.title("结果")
 
@@ -332,26 +324,7 @@ class ActionRecognitionApp:
         for i, count in enumerate(self.counts):
             text_widget.insert(tk.END, f"{i} {count}\n")
 
-        # for i, action in enumerate(smoothed_predictions):
-        #     text_widget.insert(tk.END, f"帧 {i}: {action}\n")
-
-    # def smooth_predictions(self, preds, window_size=5):
-    #     smoothed = []
-    #     history = deque(maxlen=window_size)
-    #     for pred in preds:
-    #         history.append(pred)
-    #         smoothed.append(max(set(history), key=history.count))
-    #     return smoothed
-
 
 if __name__ == "__main__":
-    print(f"Model expects {joblib.load('action_recognition_model.joblib').n_features_in_} features")
+    print(f"Model expects {joblib.load('action_recognition_model2.joblib').n_features_in_} features")
     ActionRecognitionApp(tk.Tk(), "动作识别应用")
-
-# TODO: 自更新（增强稳定性）
-# TODO: android
-
-# TODO: review code
-# TODO: fine tune
-
-# TODO: Jump rope from side
